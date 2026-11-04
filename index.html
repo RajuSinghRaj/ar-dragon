@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+  <meta name="theme-color" content="#060608">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="AR Dragon Arena – Summon the Legendary 3D Fire Dragon Inferno in immersive WebAR. Built with HTML5, CSS3, JavaScript and Google Model Viewer.">
+  <title>AR DRAGON ARENA – Summon Your Legend. Enter The Battle.</title>
+
+  <!-- Google Fonts: Orbitron, Cinzel, Rajdhani -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Local QR Code Library (Zero external dependency) -->
+  <script src="assets/qrcode.min.js"></script>
+
+  <!-- Google Model Viewer (CDN with local asset fallback) -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+  <script type="module">
+    // Fallback if CDN blocked or offline
+    if (!customElements.get('model-viewer')) {
+      import('./assets/model-viewer.min.js').catch(err => {
+        console.warn('Fallback to local model-viewer:', err);
+      });
+    }
+  </script>
+</head>
+<body>
+
+  <!-- ========================================================
+       1. CINEMATIC INTRO VIDEO SPLASH SCREEN
+       ======================================================== -->
+  <div id="introOverlay" class="intro-overlay" role="dialog" aria-modal="true" aria-label="Cinematic Intro Video">
+    <video
+      id="introVideo"
+      class="intro-video"
+      src="assets/intro.mp4"
+      playsinline
+      muted
+      autoplay
+      preload="auto"
+      title="Cinematic Intro - AR Dragon Arena"
+    ></video>
+
+    <!-- Fiery Vignette & Cinematic Overlay -->
+    <div class="intro-vignette"></div>
+
+    <!-- Intro Header & Branding -->
+    <div class="intro-header-banner">
+      <div class="intro-brand-badge">
+        <span class="dragon-glyph">🔥🐉</span>
+        <span class="brand-text">AR DRAGON ARENA</span>
+      </div>
+      <div class="intro-subtitle-pill">SUMMON YOUR LEGEND</div>
+    </div>
+
+    <!-- Intro Action Controls (Sound & Skip) -->
+    <div class="intro-controls">
+      <button id="introSoundToggle" class="intro-action-btn sound-btn" type="button" aria-label="Toggle Sound">
+        <span class="btn-icon" id="introSoundIcon">🔇</span>
+        <span class="btn-text" id="introSoundText">UNMUTE SOUND</span>
+      </button>
+
+      <button id="skipIntroBtn" class="intro-action-btn skip-btn" type="button" aria-label="Skip Cinematic Intro">
+        <span class="btn-text">SKIP INTRO</span>
+        <span class="btn-icon">⏩</span>
+      </button>
+    </div>
+
+    <!-- Video Progress Bar -->
+    <div class="intro-progress-track">
+      <div id="introProgressFill" class="intro-progress-fill"></div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       2. BACKGROUND PARTICLES & COMBAT FX CANVASES
+       ======================================================== -->
+  <canvas id="particlesCanvas" class="particles-canvas"></canvas>
+  <canvas id="fireFxCanvas" class="fire-fx-canvas"></canvas>
+  <div id="screenShakeOverlay" class="screen-flash-overlay"></div>
+
+  <!-- ========================================================
+       3. MAIN ARENA APPLICATION
+       ======================================================== -->
+  <div id="appContainer" class="app-container">
+
+    <!-- Top Navigation & Branding Header -->
+    <header class="arena-header">
+      <div class="header-content">
+        <div class="branding-group">
+          <div class="dragon-emblem">
+            <span class="emblem-icon">🐉</span>
+            <div class="emblem-glow"></div>
+          </div>
+          <div class="title-wrapper">
+            <h1 class="main-heading">AR DRAGON ARENA</h1>
+            <p class="main-subtitle">SUMMON YOUR LEGEND. ENTER THE BATTLE.</p>
+          </div>
+        </div>
+
+        <!-- Header Action Controls -->
+        <div class="header-actions">
+          <button id="sfxToggleBtn" class="hud-pill-btn sfx-btn" type="button" title="Toggle Sound Effects">
+            <span class="pill-icon" id="sfxIcon">🔊</span>
+            <span class="pill-label" id="sfxLabel">SFX: ON</span>
+          </button>
+          <div class="hud-pill ar-status-pill" id="arStatusPill" title="WebAR Hardware Support">
+            <span class="status-dot"></span>
+            <span class="status-label" id="arStatusText">WEBAR READY</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Game Grid -->
+    <main class="arena-main-grid">
+
+      <!-- LEFT / CENTER COLUMN: 3D MODEL VIEWER ARENA STAGE -->
+      <section class="arena-stage-section">
+        <div class="gaming-card stage-card">
+
+          <!-- Card Header & Status -->
+          <div class="card-header stage-card-header">
+            <div class="header-title-box">
+              <span class="card-icon">⚡</span>
+              <h2 class="card-title">ARENA SUMMONING PODIUM</h2>
+            </div>
+            <div class="stage-mode-badge" id="cameraModeBadge">
+              <span class="live-dot"></span> 3D INTERACTIVE
+            </div>
+          </div>
+
+          <!-- 3D Dragon Container with Google Model Viewer -->
+          <div class="model-viewer-wrapper" id="modelViewerWrapper">
+
+            <model-viewer
+              id="dragonViewer"
+              src="assets/dragon.glb"
+              alt="Realistic 3D Dragon Model - Inferno"
+              ar
+              ar-modes="webxr scene-viewer quick-look"
+              ar-scale="auto"
+              ar-placement="floor"
+              camera-controls
+              touch-action="pan-y"
+              auto-rotate
+              auto-rotate-delay="800"
+              rotation-per-second="22deg"
+              camera-orbit="30deg 75deg 3.6m"
+              min-camera-orbit="auto auto 1.5m"
+              max-camera-orbit="auto auto 7m"
+              field-of-view="32deg"
+              shadow-intensity="1.6"
+              shadow-softness="0.75"
+              exposure="1.2"
+              loading="eager"
+              reveal="auto"
+            >
+              <!-- Interactive Loading Poster Slot -->
+              <div slot="poster" class="model-loading-poster" id="modelPoster">
+                <div class="dragon-glyph-pulse">🐉</div>
+                <div class="loader-spinner-ring"></div>
+                <div class="loader-title">AWAKENING INFERNO...</div>
+                <div class="loader-progress-track">
+                  <div class="loader-progress-fill" id="modelLoadingFill"></div>
+                </div>
+                <div class="loader-sub">Loading 3D Meshes & Volcanic Shaders</div>
+              </div>
+
+              <!-- Native AR Button Slot for Model Viewer fallback -->
+              <button slot="ar-button" id="hiddenArButton" class="hidden-ar-btn" aria-hidden="true"></button>
+            </model-viewer>
+
+            <!-- On-Stage Interactive Overlays -->
+            <div class="stage-overlay-controls">
+              <button id="toggleAutoRotateBtn" class="stage-ctrl-btn active" type="button" title="Toggle Auto-Rotation">
+                <span class="icon">🔄</span>
+                <span class="label">Rotate: ON</span>
+              </button>
+              <button id="resetCameraBtn" class="stage-ctrl-btn" type="button" title="Reset Camera Perspective">
+                <span class="icon">🎯</span>
+                <span class="label">Reset View</span>
+              </button>
+              <button id="toggleLightsBtn" class="stage-ctrl-btn" type="button" title="Boost Arena Lighting">
+                <span class="icon">✨</span>
+                <span class="label">Boost Light</span>
+              </button>
+            </div>
+
+            <!-- Virtual Joystick Controller (Unity Joystick Pack) -->
+            <div class="virtual-joystick-hud" id="virtualJoystickHud" title="Drag joystick to control dragon view and movement">
+              <div class="joystick-base" id="joystickBase">
+                <div class="joystick-stick" id="joystickStick"></div>
+              </div>
+              <span class="joystick-caption">🎮 AR JOYSTICK</span>
+            </div>
+
+            <!-- Floating Combat Floating Text Anchor -->
+            <div id="floatingTextContainer" class="floating-text-container"></div>
+          </div>
+
+          <!-- PRIMARY SUMMON IN AR ACTION BUTTON -->
+          <div class="summon-ar-action-box">
+            <button id="summonArBtn" class="btn-summon-ar" type="button">
+              <div class="ar-btn-glow"></div>
+              <div class="ar-btn-content">
+                <span class="ar-cube-icon">
+                  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                  </svg>
+                </span>
+                <div class="ar-btn-text-group">
+                  <span class="ar-btn-title">SUMMON DRAGON IN AR</span>
+                  <span class="ar-btn-sub">PLACE INFERNO ON YOUR FLOOR • WebXR / Scene Viewer / Quick Look</span>
+                </div>
+              </div>
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- RIGHT COLUMN: DRAGON STATS & INTERACTIVE GAME CONTROLS -->
+      <section class="arena-sidebar-section">
+
+        <!-- 1. DRAGON STATISTICS PANEL -->
+        <div class="gaming-card stats-card">
+          <div class="card-header">
+            <div class="header-title-box">
+              <span class="card-icon">👑</span>
+              <h2 class="card-title">DRAGON ARCHIVES</h2>
+            </div>
+            <div class="rarity-badge legendary">
+              <span class="star-icon">⭐</span> LEGENDARY
+            </div>
+          </div>
+
+          <!-- Dragon Identity Banner -->
+          <div class="dragon-profile-banner">
+            <div class="dragon-avatar-box">
+              <span class="avatar-flame">🔥</span>
+            </div>
+            <div class="dragon-meta">
+              <div class="dragon-name-row">
+                <h3 class="dragon-name" id="dragonNameDisplay">INFERNO</h3>
+                <span class="level-badge" id="dragonLevelBadge">LVL 25</span>
+              </div>
+              <p class="dragon-species">Primordial Fire Drake • Arena Champion</p>
+            </div>
+          </div>
+
+          <!-- HUD Progress Bars -->
+          <div class="stats-bars-container">
+
+            <!-- Health Bar -->
+            <div class="stat-group">
+              <div class="stat-label-row">
+                <span class="stat-name">
+                  <span class="stat-glyph hp-glyph">💖</span> HEALTH
+                </span>
+                <span class="stat-val" id="hpTextDisplay">1000 / 1000 HP</span>
+              </div>
+              <div class="stat-bar-track">
+                <div id="hpBarFill" class="stat-bar-fill hp-fill" style="width: 100%;">
+                  <span class="bar-sparkle"></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Attack Bar -->
+            <div class="stat-group">
+              <div class="stat-label-row">
+                <span class="stat-name">
+                  <span class="stat-glyph atk-glyph">⚔️</span> ATTACK POWER
+                </span>
+                <span class="stat-val" id="atkTextDisplay">850 / 1000</span>
+              </div>
+              <div class="stat-bar-track">
+                <div id="atkBarFill" class="stat-bar-fill atk-fill" style="width: 85%;"></div>
+              </div>
+            </div>
+
+            <!-- Defence Bar -->
+            <div class="stat-group">
+              <div class="stat-label-row">
+                <span class="stat-name">
+                  <span class="stat-glyph def-glyph">🛡️</span> DEFENCE
+                </span>
+                <span class="stat-val" id="defTextDisplay">720 / 1000</span>
+              </div>
+              <div class="stat-bar-track">
+                <div id="defBarFill" class="stat-bar-fill def-fill" style="width: 72%;"></div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Grid of Micro-Stat Badges -->
+          <div class="micro-stats-grid">
+            <div class="micro-stat-tile">
+              <span class="micro-title">ELEMENT</span>
+              <span class="micro-value fiery">FIRE 🔥</span>
+            </div>
+            <div class="micro-stat-tile">
+              <span class="micro-title">RARITY</span>
+              <span class="micro-value golden">LEGENDARY</span>
+            </div>
+            <div class="micro-stat-tile">
+              <span class="micro-title">DRAGON LEVEL</span>
+              <span class="micro-value crimson">LVL 25</span>
+            </div>
+            <div class="micro-stat-tile">
+              <span class="micro-title">BASE DAMAGE</span>
+              <span class="micro-value orange">850 DMG</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. INTERACTIVE GAME CONTROLS -->
+        <div class="gaming-card controls-card">
+          <div class="card-header">
+            <div class="header-title-box">
+              <span class="card-icon">🎮</span>
+              <h2 class="card-title">COMBAT COMMAND HUD</h2>
+            </div>
+            <span class="hud-status-badge">READY TO ENGAGE</span>
+          </div>
+
+          <div class="controls-action-grid">
+
+            <!-- FIRE ATTACK BUTTON -->
+            <button id="fireAttackBtn" class="game-btn btn-fire-attack" type="button">
+              <div class="btn-shine"></div>
+              <span class="btn-main-icon">🔥</span>
+              <div class="btn-text-content">
+                <span class="btn-title">FIRE ATTACK</span>
+                <span class="btn-desc">Hellfire Breath (850 DMG)</span>
+              </div>
+            </button>
+
+            <!-- HEAL DRAGON BUTTON -->
+            <button id="healDragonBtn" class="game-btn btn-heal-dragon" type="button">
+              <div class="btn-shine"></div>
+              <span class="btn-main-icon">💚</span>
+              <div class="btn-text-content">
+                <span class="btn-title">HEAL DRAGON</span>
+                <span class="btn-desc">Phoenix Ash (+100 HP)</span>
+              </div>
+            </button>
+
+            <!-- RESET STATS BUTTON -->
+            <button id="resetStatsBtn" class="game-btn btn-reset-stats" type="button">
+              <span class="btn-main-icon">🔄</span>
+              <div class="btn-text-content">
+                <span class="btn-title">RESET STATS</span>
+                <span class="btn-desc">Restore Default Legendary Stats</span>
+              </div>
+            </button>
+
+            <!-- SIMULATE BATTLE DAMAGE (Demonstrates healing & HP changes!) -->
+            <button id="takeDamageBtn" class="game-btn btn-take-damage" type="button" title="Simulate enemy strike to test healing">
+              <span class="btn-main-icon">💥</span>
+              <div class="btn-text-content">
+                <span class="btn-title">SIMULATE ENEMY HIT</span>
+                <span class="btn-desc">Inflict -200 HP to test Heal</span>
+              </div>
+            </button>
+
+          </div>
+
+          <!-- Arena Target / Training Boss Card -->
+          <div class="combat-target-card">
+            <div class="target-header">
+              <div class="target-name-group">
+                <span class="target-icon">💀</span>
+                <span class="target-name">ARENA TARGET: FROST WYRM DUMMY</span>
+              </div>
+              <span class="target-hp-label" id="targetHpText">2000 / 2000 HP</span>
+            </div>
+            <div class="target-bar-track">
+              <div id="targetBarFill" class="target-bar-fill" style="width: 100%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. LIVE COMBAT LOG -->
+        <div class="gaming-card log-card">
+          <div class="card-header">
+            <div class="header-title-box">
+              <span class="card-icon">📜</span>
+              <h2 class="card-title">BATTLE CHRONICLES</h2>
+            </div>
+            <button id="clearLogBtn" class="tiny-ghost-btn" type="button">Clear Log</button>
+          </div>
+          <div id="battleLogContainer" class="battle-log-feed">
+            <!-- Dynamic combat log items inserted by script.js -->
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- ========================================================
+         4. DEDICATED QR CODE WEBAR ACCESS SECTION
+         ======================================================== -->
+    <section class="qr-access-section" id="qrSection">
+      <div class="gaming-card qr-card">
+
+        <div class="qr-grid-layout">
+
+          <!-- Left Info Column -->
+          <div class="qr-info-column">
+            <div class="section-badge">MOBILE WEBAR ACCESS</div>
+            <h2 class="qr-heading">SCAN TO SUMMON IN PHYSICAL REALITY</h2>
+            <p class="qr-description">
+              Experience true Augmented Reality directly through your smartphone camera. Scan this QR code with any iPhone (iOS 12+) or Android (ARCore) device to project <strong>INFERNO</strong> right onto your floor or table without installing any mobile app!
+            </p>
+
+            <!-- Deployment URL Input & Config -->
+            <div class="url-config-box">
+              <label for="qrUrlInput" class="url-input-label">WEBSITE HTTPS DEPLOYMENT URL:</label>
+              <div class="url-input-group">
+                <input
+                  id="qrUrlInput"
+                  class="qr-url-input"
+                  type="url"
+                  placeholder="https://your-domain-or-tunnel.com"
+                  spellcheck="false"
+                >
+                <button id="updateQrBtn" class="url-update-btn" type="button">UPDATE QR</button>
+              </div>
+              <div class="url-actions-row">
+                <button id="copyUrlBtn" class="tiny-pill-btn" type="button">
+                  <span class="btn-icon">📋</span> Copy Link
+                </button>
+                <button id="resetUrlBtn" class="tiny-pill-btn" type="button">
+                  <span class="btn-icon">🔄</span> Use Current Address
+                </button>
+              </div>
+            </div>
+
+            <!-- Mobile Compatibility Badges -->
+            <div class="compatibility-grid">
+              <div class="compat-item">
+                <span class="compat-icon">🤖</span>
+                <div class="compat-text">
+                  <strong>Android ARCore</strong>
+                  <span>Google Chrome • Scene Viewer</span>
+                </div>
+              </div>
+              <div class="compat-item">
+                <span class="compat-icon">🍎</span>
+                <div class="compat-text">
+                  <strong>Apple iOS</strong>
+                  <span>Safari 12+ • Quick Look AR</span>
+                </div>
+              </div>
+              <div class="compat-item">
+                <span class="compat-icon">🌐</span>
+                <div class="compat-text">
+                  <strong>WebXR Standard</strong>
+                  <span>Chromium 79+ • Immersive AR</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right QR Code Display Box -->
+          <div class="qr-code-column">
+            <div class="qr-display-frame">
+              <div class="qr-frame-corner corner-tl"></div>
+              <div class="qr-frame-corner corner-tr"></div>
+              <div class="qr-frame-corner corner-bl"></div>
+              <div class="qr-frame-corner corner-br"></div>
+
+              <div id="qrCodeContainer" class="qr-code-box">
+                <!-- Authentic QR Code Canvas dynamically rendered here by qrcode.min.js -->
+              </div>
+
+              <div class="qr-scan-badge">
+                <span class="pulse-ring"></span>
+                <span>POINT PHONE CAMERA TO SCAN</span>
+              </div>
+            </div>
+            <p class="qr-url-caption" id="qrUrlCaption">Generating QR Code...</p>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="arena-footer">
+      <div class="footer-content">
+        <p class="footer-title">AR DRAGON ARENA • AAA WebAR Gaming Engine</p>
+        <p class="footer-credits">Powered by HTML5, CSS3, Google Model Viewer & Procedural Audio Synthesizer.</p>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- ========================================================
+       5. AR INSTRUCTIONS & FALLBACK MODAL
+       ======================================================== -->
+  <div id="arModal" class="ar-modal-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="ar-modal-card">
+      <button id="closeArModalBtn" class="modal-close-btn" type="button" aria-label="Close modal">✕</button>
+
+      <div class="modal-header">
+        <span class="modal-dragon-icon">🐲</span>
+        <h3 class="modal-title">SUMMON IN REAL WORLD (AR)</h3>
+        <p class="modal-subtitle">WebAR requires a mobile device with AR camera sensors.</p>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-steps-list">
+          <div class="modal-step">
+            <div class="step-num">1</div>
+            <div class="step-desc">
+              <strong>Scan with Phone Camera:</strong>
+              <span>Point your smartphone camera at the QR code below to open this arena on mobile.</span>
+            </div>
+          </div>
+          <div class="modal-step">
+            <div class="step-num">2</div>
+            <div class="step-desc">
+              <strong>Tap "SUMMON DRAGON IN AR":</strong>
+              <span>On Android Chrome or iOS Safari, click the glowing AR button to activate your camera.</span>
+            </div>
+          </div>
+          <div class="modal-step">
+            <div class="step-num">3</div>
+            <div class="step-desc">
+              <strong>Scan Flat Surface:</strong>
+              <span>Slowly pan your phone across your floor or table to project INFERNO into your room!</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-qr-preview">
+          <div id="modalQrContainer" class="modal-qr-box"></div>
+          <span class="modal-qr-label">Scan to launch AR instantly</span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="modalGotItBtn" class="modal-primary-btn" type="button">RETURN TO 3D ARENA</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       6. COMBAT TOAST NOTIFICATION CONTAINER
+       ======================================================== -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <!-- Main Game Logic Script -->
+  <script src="script.js"></script>
+</body>
+</html>
+
