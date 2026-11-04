@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#08121b">
+  <title>Mini AR Drive</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
+</head>
+<body>
+  <main class="shell">
+    <header><div class="eyebrow">A POCKET SIZED AR TOY</div><h1>Mini <span>AR</span> Drive</h1><p>Take a little car for a spin on your desk or on the road.</p></header>
+    <section class="share-card" aria-label="Open this game on your phone"><div><div class="share-title">OPEN ON YOUR PHONE</div><p>Scan this QR code after you deploy the site.</p><code id="site-url">Waiting for site URL...</code></div><div class="qr-frame"><canvas id="qr-code" aria-label="QR code for this site"></canvas></div></section>
+    <section class="stage" aria-label="3D car driving game">
+      <div class="sky-glow"></div><div id="scene"></div>
+      <div class="hud"><span class="live"><i></i> DRIVE</span><span><b id="speed">0</b> km/h</span></div>
+      <div class="hint" id="hint">Drag to steer · hold the arrows to drive</div>
+      <div class="controls"><button id="left" aria-label="Steer left">◀</button><button id="gas" class="gas" aria-label="Accelerate">▲</button><button id="right" aria-label="Steer right">▶</button></div>
+    </section>
+    <section class="actions"><button id="ar" class="primary">◎ &nbsp; Place in your room</button><label class="upload">＋ &nbsp; Add a 3D car model<input id="model" type="file" accept=".glb,.gltf"></label></section>
+    <p class="note" id="status">Point your camera at a flat surface, then place your car.</p>
+    <footer>Works in modern Android browsers. AR needs an ARCore compatible phone and a secure (HTTPS) page.</footer>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

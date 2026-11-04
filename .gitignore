@@ -1,4 +1,5 @@
-.DS_Store
-Thumbs.db
-*.log
-
+# Local HTTPS preview credentials and generated QR
+local-*.pem
+phone-qr.png
+server*.log
+__pycache__/
