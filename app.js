@@ -62,6 +62,20 @@ road.receiveShadow = true;
 scene.add(road);
 
 const roadside = [];
+const clouds = [];
+const cloudMaterial = new THREE.MeshStandardMaterial({ color: 0xf4fbff, roughness: 1, transparent: true, opacity: 0.92 });
+for (const [x, y, z, scale] of [[-8, 5.4, -22, 1.1], [0, 6.3, -33, 1.35], [8, 5.1, -25, 1.05], [-11, 6.4, -46, 1.4], [10, 6.2, -49, 1.3]]) {
+  const cloud = new THREE.Group();
+  for (const [px, py, pz, radius] of [[-0.8, 0, 0, 0.72], [-0.25, 0.22, 0, 0.95], [0.45, 0.12, 0, 0.82], [0.95, -0.02, 0, 0.58]]) {
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(radius, 14, 10), cloudMaterial);
+    puff.position.set(px, py, pz);
+    cloud.add(puff);
+  }
+  cloud.position.set(x, y, z);
+  cloud.scale.setScalar(scale);
+  scene.add(cloud);
+  clouds.push(cloud);
+}
 for (const x of [-2.68, 2.68]) {
   const line = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.02, 120), new THREE.MeshBasicMaterial({ color: 0xf5d879 }));
   line.position.set(x, 0.02, 0);
@@ -231,6 +245,7 @@ renderer.xr.addEventListener('sessionstart', async () => {
   road.visible = false;
   dashes.forEach(dash => { dash.visible = false; });
   roadside.forEach(object => { object.visible = false; });
+  clouds.forEach(cloud => { cloud.visible = false; });
   announce('Car preview is ahead. Scan a surface and tap to place it, or drive now.');
   try {
     const session = renderer.xr.getSession();
@@ -256,6 +271,7 @@ renderer.xr.addEventListener('sessionend', () => {
   road.visible = true;
   dashes.forEach(dash => { dash.visible = true; });
   roadside.forEach(object => { object.visible = true; });
+  clouds.forEach(cloud => { cloud.visible = true; });
   car.position.set(0, 0, 1.5);
   car.visible = true;
   announce('Hold the up arrow to drive. Collect the gold rings!');
@@ -296,6 +312,19 @@ renderer.domElement.addEventListener('click', () => {
   car.visible = true;
 });
 
+document.querySelector('#place-car').addEventListener('click', () => {
+  if (!arMode) return;
+  if (currentHitPose) {
+    const { position, orientation } = currentHitPose.transform;
+    car.position.set(position.x, position.y, position.z);
+    car.quaternion.set(orientation.x, orientation.y, orientation.z, orientation.w);
+  }
+  carAnchored = true;
+  car.visible = true;
+  positionARTraffic();
+  announce(currentHitPose ? 'Car placed on the scanned surface. Hold ▲ to drive.' : 'Car preview locked in place. Hold ▲ to drive.');
+});
+
 function positionARTraffic() {
   const places = [[1.8, -2.4], [-1.9, -4.3], [1.7, -6.3]];
   trafficCars.forEach((trafficCar, i) => {
@@ -321,6 +350,10 @@ renderer.setAnimationLoop((_, frame) => {
   const dt = Math.min(clock.getDelta(), 0.05);
   const activeAR = renderer.xr.isPresenting;
   if (!activeAR) {
+    clouds.forEach((cloud, i) => {
+      cloud.position.x += Math.sin(clock.elapsedTime * 0.18 + i) * dt * 0.08;
+      cloud.position.y += Math.sin(clock.elapsedTime * 0.35 + i * 2) * dt * 0.025;
+    });
     car.rotation.y += steering * dt * 0.65;
     car.position.x = THREE.MathUtils.clamp(car.position.x + steering * dt * throttle * 1.9, -1.75, 1.75);
     dashes.forEach(dash => {

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <meta name="theme-color" content="#08121b">
   <title>Mini AR Drive</title>
-  <link rel="stylesheet" href="style.css?v=ar-fix-2">
+  <link rel="stylesheet" href="style.css?v=ar-clouds-3">
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 </head>
 <body>
@@ -18,12 +18,14 @@
       <div class="hint" id="hint">Hold ▲ to accelerate · ◀ ▶ to steer</div>
       <div class="controls"><button id="left" aria-label="Steer left">◀</button><button id="gas" class="gas" aria-label="Accelerate">▲</button><button id="right" aria-label="Steer right">▶</button></div>
       <button id="exit-ar" class="exit-ar" aria-label="Exit augmented reality">Exit AR</button>
+      <div id="ar-car-preview" class="ar-car-preview" aria-hidden="true"><svg viewBox="0 0 240 130"><ellipse cx="121" cy="111" rx="87" ry="12" fill="#07151a" opacity=".35"/><path d="M42 84 53 50q5-13 22-16l31-21q8-6 18-6h36q13 0 21 11l24 27 17 8q8 4 8 14v20q0 9-10 9h-15a26 26 0 0 0-51 0H96a26 26 0 0 0-51 0H31q-9 0-9-9V91q0-7 7-9z" fill="#43e2ac" stroke="#e1fff2" stroke-width="3"/><path d="m83 42 27-18q5-4 12-4h23v29H75z" fill="#13323c" stroke="#b4f4e3" stroke-width="3"/><path d="M151 20h8q8 0 13 7l17 22h-38z" fill="#13323c" stroke="#b4f4e3" stroke-width="3"/><path d="M29 79h22l9 11H26z" fill="#fff1a4"/><path d="M195 79h20l5 10h-18z" fill="#ff625a"/><circle cx="70" cy="91" r="19" fill="#111d24" stroke="#a9c6c2" stroke-width="4"/><circle cx="70" cy="91" r="8" fill="#d9ece7"/><circle cx="180" cy="91" r="19" fill="#111d24" stroke="#a9c6c2" stroke-width="4"/><circle cx="180" cy="91" r="8" fill="#d9ece7"/><path d="M112 56h21" stroke="#e7fff4" stroke-width="3" stroke-linecap="round"/></svg><span>YOUR CAR</span></div>
+      <button id="place-car" class="place-car">Place car here</button>
     </section>
     <section class="actions"><button id="ar" class="primary">◎ &nbsp; Place in your room</button><label class="upload">＋ &nbsp; Add a 3D car model<input id="model" type="file" accept=".glb,.gltf"></label></section>
     <p class="note" id="status">Point your camera at a flat surface, then place your car.</p>
     <footer>Works in modern Android browsers. AR needs an ARCore compatible phone and a secure (HTTPS) page.</footer>
   </main>
   <script src="vendor/qrcode.js"></script>
-  <script type="module" src="app.js?v=ar-fix-2"></script>
+  <script type="module" src="app.js?v=ar-clouds-3"></script>
 </body>
 </html>
