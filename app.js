@@ -271,7 +271,11 @@ document.querySelector('#ar').addEventListener('click', () => {
   }
   arButton.click();
 });
-document.querySelector('#exit-ar').addEventListener('click', () => renderer.xr.getSession()?.end());
+document.querySelector('#exit-ar').addEventListener('click', async () => {
+  const session = renderer.xr.getSession();
+  if (session) await session.end();
+  location.reload();
+});
 
 renderer.domElement.addEventListener('click', () => {
   if (!arMode) return;
