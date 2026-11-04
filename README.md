@@ -1,6 +1,6 @@
 # 🐉 Augmented Reality Dragon Tracker (Unity + AR Foundation)
 
-An interactive **Augmented Reality (AR)** project built using **Unity** and **AR Foundation**, where scanning a real-world image spawns a **3D Dragon** that can be controlled using an on-screen **joystick**! Perfect for beginners exploring AR development and mobile-based interaction 🚀
+An interactive **Augmented Reality (AR)** project built using **Unity** and **AR Foundation**, where scanning a real-world image spawns a **3D Dragon** that can be controlled using an on-screen **joystick** and unleash a **fire attack**! Perfect for beginners exploring AR development and mobile-based interaction 🚀
 
 [📺 Demo Video (Made with Unity)](intro.mp4)
 
@@ -11,10 +11,11 @@ An interactive **Augmented Reality (AR)** project built using **Unity** and **AR
 ## ✨ Features
 
 - 📸 **AR Image Tracking** — Scan a real-world image to trigger AR content
-- 🐲 **3D Dragon Model** — A stylized dragon spawns over the image
-- 🎮 **Joystick Control** — Use a virtual joystick to control dragon movement
+- 🐲 **3D Dragon Model** — A stylized 3D dragon spawns over the image
+- 🎮 **Joystick Control** — Use a virtual joystick to control dragon movement in real time
+- 🔥 **Fire Breath Attack** — Unleash a devastating Hellfire particle breath stream with roar audio & damage
 - 📱 **Android Support** — Deploys and runs smoothly on Android devices
-- ⚡ **Lightweight Build** — Optimized for mobile devices using Unity's LTS version
+- ⚡ **Lightweight Build** — Optimized for mobile devices using Unity LTS
 
 ---
 
@@ -25,9 +26,9 @@ An interactive **Augmented Reality (AR)** project built using **Unity** and **AR
 | Unity (2021.3.6 LTS) | Core development engine                    |
 | AR Foundation   | Image tracking and AR scene management      |
 | ARCore          | Backend engine for Android AR               |
-| C#              | Custom scripts for dragon control & logic   |
+| C#              | Custom scripts for dragon control, movement & fire attack |
 | Fixed Joystick (Joystick Pack) | Virtual joystick for user input             |
-| Game Assets     | 3D Dragon model + Target image              |
+| Game Assets     | 3D Dragon model + Target reference image    |
 
 ---
 
@@ -37,17 +38,17 @@ An interactive **Augmented Reality (AR)** project built using **Unity** and **AR
 
 AR-Dragon-Tracker/
 ├── Assets/
-│   ├── Dragon/                # 3D model + prefab
+│   ├── Dragon/
+│   │   └── dragon.glb         # 3D Dragon model
 │   ├── Scripts/
 │   │   ├── PrefabCreator.cs   # Spawns dragon on image detection
-│   │   └── DragonController.cs # Handles joystick-based movement
-│   ├── UI/
-│   │   └── FixedJoystick.prefab
+│   │   ├── DragonController.cs # Handles joystick-based movement & physics
+│   │   ├── DragonFireAttack.cs # Fire breath particle attack, roar SFX & damage
+│   │   └── FixedJoystick.cs   # Virtual joystick touch/drag controller
 │   └── ImageLibrary/
-│       └── GameOfThrones.jpg  # Tracked image
-├── AR Session Setup/
-│   ├── AR Session Origin
-│   └── AR Session
+│       └── GameOfThrones.jpg  # Tracked reference image
+├── intro.mp4                  # Made with Unity cinematic video
+└── demo.gif                   # Animated demonstration preview
 
 ```
 
@@ -55,10 +56,11 @@ AR-Dragon-Tracker/
 
 ## 🕹️ Interaction Flow
 
-1. 🖼️ **Scan Image** → The app detects a reference image (e.g., Game of Thrones poster).
-2. 🐉 **Dragon Spawns** → A dragon model appears above the image in AR.
-3. 🎛️ **Use Joystick** → Move the dragon around using the on-screen joystick.
+1. 🖼️ **Scan Image** → The app detects a reference image (e.g., `GameOfThrones.jpg`).
+2. 🐉 **Dragon Spawns** → The dragon model appears above the image in Augmented Reality.
+3. 🎛️ **Use Joystick** → Move the dragon around smoothly using the on-screen virtual joystick.
 4. 📐 **Physics & Rotation** → The dragon moves naturally and rotates toward the direction of movement.
+5. 🔥 **Fire Attack** → Press the Fire button to trigger flame breath particles, roar SFX, and deal damage!
 
 ---
 
@@ -66,13 +68,17 @@ AR-Dragon-Tracker/
 
 ### 🔍 AR Image Tracking
 - Unity’s `AR Tracked Image Manager` listens for image detection.
-- When the target image is found, it triggers the `PrefabCreator` script.
+- When the target image is found, it triggers the `PrefabCreator.cs` script.
 - The dragon prefab is instantiated with a slight vertical offset.
 
 ### 🐉 Dragon Control Logic
-- `DragonController` script reads input from the joystick.
+- `DragonController.cs` script reads input from `FixedJoystick.cs`.
 - Movement is handled via Unity physics using `Rigidbody`.
 - Rotation ensures the dragon faces the direction it’s moving.
+
+### 🔥 Fire Attack System
+- `DragonFireAttack.cs` controls the mouth particle emitter (`ParticleSystem`).
+- Plays roaring audio clips and creates an area-of-effect damage sphere.
 
 ### 🛠️ Android Configurations
 - ✔️ Switched platform to Android in Build Settings
@@ -94,10 +100,11 @@ This project is great for:
 
 ## 📦 How to Run
 
-1. Open in Unity 2021.3.6 LTS or later.
-2. Add your own tracked image and dragon model (optional).
-3. Connect Android device with USB debugging.
-4. Switch build platform to Android → Build & Run.
+1. Open project in Unity 2021.3.6 LTS or later.
+2. Target reference image is located in `Assets/ImageLibrary/GameOfThrones.jpg`.
+3. 3D Dragon model is located in `Assets/Dragon/dragon.glb`.
+4. Connect Android device with USB debugging enabled.
+5. Switch build platform to Android → Build & Run.
 
 ---
 
@@ -112,9 +119,7 @@ This project is great for:
 
 ## 🔮 Future Improvements
 
-- ✨ Add animation to the dragon
-- 🔊 Integrate sound effects
-- 🌍 Expand to markerless tracking
+- ✨ Add wing flapping animation to the dragon
+- 🔊 Add environmental ambient audio
+- 🌍 Expand to plane detection markerless tracking
 - 📲 Add iOS support via ARKit
-
----
