@@ -2,31 +2,346 @@ import * as THREE from 'three';
 import { ARButton } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/webxr/ARButton.js';
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 
-const host=document.querySelector('#scene'),status=document.querySelector('#status'),speedLabel=document.querySelector('#speed');
-const siteUrl=document.querySelector('#site-url');siteUrl.textContent=location.href;if(window.QRCode){QRCode.toCanvas(document.querySelector('#qr-code'),location.href,{width:180,margin:1,color:{dark:'#08121b',light:'#ffffff'}},error=>{if(error)siteUrl.textContent='Copy this address: '+location.href})}else{siteUrl.textContent='Copy this address: '+location.href}
-const scene=new THREE.Scene(); scene.background=new THREE.Color('#66817e');
-const camera=new THREE.PerspectiveCamera(50,1,.1,100);camera.position.set(0,4.4,8);camera.lookAt(0,0,0);
-const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.shadowMap.enabled=true;renderer.xr.enabled=true;host.appendChild(renderer.domElement);
-scene.add(new THREE.HemisphereLight(0xe1f5e2,0x53604b,2));const sun=new THREE.DirectionalLight(0xffefd1,3);sun.position.set(-3,8,5);sun.castShadow=true;scene.add(sun);
-const ground=new THREE.Mesh(new THREE.PlaneGeometry(100,100),new THREE.MeshStandardMaterial({color:0x79836b,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.02;ground.receiveShadow=true;scene.add(ground);
-const road=new THREE.Mesh(new THREE.PlaneGeometry(5,100),new THREE.MeshStandardMaterial({color:0x343b40,roughness:.95}));road.rotation.x=-Math.PI/2;road.position.y=.005;road.receiveShadow=true;scene.add(road);
-const dashes=[];for(let z=-48;z<50;z+=5){const m=new THREE.Mesh(new THREE.BoxGeometry(.12,.015,2.2),new THREE.MeshBasicMaterial({color:0xf4dfa1}));m.position.set(0,.02,z);scene.add(m);dashes.push(m)}
-for(const side of [-1,1])for(let i=0;i<14;i++){const h=.25+(i*37%100)/100;const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.06,.11,h,6),new THREE.MeshStandardMaterial({color:0x584939}));trunk.position.set(side*(4+(i%3)*1.5),h/2,-48+i*7);scene.add(trunk);const crown=new THREE.Mesh(new THREE.IcosahedronGeometry(.45+(i%3)*.12,1),new THREE.MeshStandardMaterial({color:i%2?0x657d56:0x829263,roughness:1}));crown.position.set(trunk.position.x,h+.25,trunk.position.z);crown.castShadow=true;scene.add(crown)}
-const car=new THREE.Group();scene.add(car);
-const paint=new THREE.MeshStandardMaterial({color:0x54d6a1,metalness:.25,roughness:.3}),dark=new THREE.MeshStandardMaterial({color:0x1a252b,roughness:.35}),glass=new THREE.MeshStandardMaterial({color:0x9bd5d1,metalness:.2,roughness:.2});
-function box(parent,geo,mat,pos){const m=new THREE.Mesh(geo,mat);m.position.set(...pos);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
-box(car,new THREE.BoxGeometry(1.35,.42,2.25),paint,[0,.42,0]);box(car,new THREE.BoxGeometry(.98,.4,1.05),glass,[0,.81,-.1]);box(car,new THREE.BoxGeometry(.08,.09,.6),dark,[0,.58,-1.02]);
-for(const x of [-.72,.72])for(const z of [-.72,.72]){const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,.16,16),dark);wheel.rotation.z=Math.PI/2;wheel.position.set(x,.25,z);wheel.castShadow=true;car.add(wheel)}
-car.position.set(0,0,1.5);let steering=0,throttle=0,arMode=false,clock=new THREE.Clock();
-function resize(){const r=host.getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix()}new ResizeObserver(resize).observe(host);resize();
-let hitTestSourceResolved=null;renderer.xr.addEventListener('sessionstart',async()=>{arMode=true;car.visible=false;hitTestSourceResolved=null;scene.background=null;ground.visible=false;road.visible=false;dashes.forEach(m=>m.visible=false);status.textContent='Move your phone slowly to find a flat surface, then tap to place the car.';try{const session=renderer.xr.getSession();const ref=await session.requestReferenceSpace('viewer');hitTestSourceResolved=await session.requestHitTestSource({space:ref})}catch{hitTestSourceResolved=null}});
-let hitMarker;renderer.xr.addEventListener('sessionend',()=>{arMode=false;scene.background=new THREE.Color('#66817e');ground.visible=true;road.visible=true;dashes.forEach(m=>m.visible=true);status.textContent='Point your camera at a flat surface, then place your car.';hitMarker=null});
-const arButton=ARButton.createButton(renderer,{requiredFeatures:['hit-test'],optionalFeatures:['dom-overlay'],domOverlay:{root:document.body}});arButton.style.display='none';document.body.appendChild(arButton);document.querySelector('#ar').onclick=()=>{if(!navigator.xr||!isSecureContext||arButton.disabled){status.textContent='AR needs secure HTTPS, a current Chrome browser, and an ARCore supported Android phone.';status.classList.add('error');return}arButton.click()};
-renderer.domElement.addEventListener('click',()=>{if(hitMarker?.visible){car.position.copy(hitMarker.position);car.quaternion.copy(hitMarker.quaternion);car.visible=true;status.textContent='Car placed! Use the steering controls to drive.'}});
-const reticle=new THREE.Mesh(new THREE.RingGeometry(.08,.11,32),new THREE.MeshBasicMaterial({color:0x96f0c0}));reticle.rotation.x=-Math.PI/2;reticle.matrixAutoUpdate=false;reticle.visible=false;scene.add(reticle);hitMarker=reticle;
-renderer.setAnimationLoop((_,frame)=>{const dt=Math.min(clock.getDelta(),.05);if(!arMode){car.rotation.y+=steering*dt*1.4;car.position.x=THREE.MathUtils.clamp(car.position.x+steering*dt*throttle*1.4,-1.7,1.7);for(const d of dashes){d.position.z+=throttle*dt*12;if(d.position.z>8)d.position.z=-48}speedLabel.textContent=String(Math.round(throttle*80));camera.position.x+=(car.position.x*.45-camera.position.x)*.025}else if(frame){if(car.visible&&throttle){car.rotation.y+=steering*dt*.8;car.translateZ(-throttle*dt*1.2)}speedLabel.textContent=String(Math.round(throttle*25));const source=hitTestSourceResolved;if(source){const results=frame.getHitTestResults(source);if(results.length){const pose=results[0].getPose(renderer.xr.getReferenceSpace());reticle.visible=true;reticle.matrix.fromArray(pose.transform.matrix)}else reticle.visible=false}}renderer.render(scene,camera)});
-function bindHold(id,fn){const el=document.querySelector(id);const start=e=>{e.preventDefault();fn(true)};const stop=()=>fn(false);el.addEventListener('pointerdown',start);['pointerup','pointercancel','pointerleave'].forEach(evt=>el.addEventListener(evt,stop))}
-bindHold('#left',v=>steering=v?-1:0);bindHold('#right',v=>steering=v?1:0);bindHold('#gas',v=>throttle=v?1:0);
-let dragX=null;renderer.domElement.addEventListener('pointerdown',e=>dragX=e.clientX);renderer.domElement.addEventListener('pointermove',e=>{if(dragX!==null&&!arMode){steering=THREE.MathUtils.clamp((e.clientX-dragX)/50,-1,1);dragX=e.clientX}});renderer.domElement.addEventListener('pointerup',()=>{dragX=null;steering=0});
-document.querySelector('#model').addEventListener('change',e=>{const file=e.target.files[0];if(!file)return;new GLTFLoader().load(URL.createObjectURL(file),gltf=>{car.clear();gltf.scene.scale.setScalar(1);gltf.scene.position.y=0;car.add(gltf.scene);status.textContent='Custom model loaded. AR placement and steering are ready.'},undefined,()=>{status.textContent='Could not load that model. Choose a valid GLB or glTF file.';status.classList.add('error')})});
-window.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='a')steering=-1;if(e.key==='ArrowRight'||e.key==='d')steering=1;if(e.key==='ArrowUp'||e.key===' ')throttle=1});window.addEventListener('keyup',e=>{if(['ArrowLeft','ArrowRight','a','d'].includes(e.key))steering=0;if(e.key==='ArrowUp'||e.key===' ')throttle=0});
+const host = document.querySelector('#scene');
+const status = document.querySelector('#status');
+const speedLabel = document.querySelector('#speed');
+const scoreLabel = document.querySelector('#score');
+const siteUrl = document.querySelector('#site-url');
+siteUrl.textContent = location.href;
+try {
+  const qr = window.qrcode(0, 'M');
+  qr.addData(location.href);
+  qr.make();
+  document.querySelector('#qr-code').src = qr.createDataURL(5, 4);
+} catch {
+  siteUrl.textContent = `Copy this address: ${location.href}`;
+}
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#78939a');
+const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 120);
+camera.position.set(0, 4.4, 8.4);
+camera.lookAt(0, 0.2, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.xr.enabled = true;
+host.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xe8f8ff, 0x47533f, 2.2));
+const sunlight = new THREE.DirectionalLight(0xfff0cd, 3.2);
+sunlight.position.set(-3, 9, 5);
+sunlight.castShadow = true;
+scene.add(sunlight);
+
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 120), new THREE.MeshStandardMaterial({ color: 0x849075, roughness: 1 }));
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -0.03;
+ground.receiveShadow = true;
+scene.add(ground);
+
+const road = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 120), new THREE.MeshStandardMaterial({ color: 0x303941, roughness: 0.95 }));
+road.rotation.x = -Math.PI / 2;
+road.position.y = 0;
+road.receiveShadow = true;
+scene.add(road);
+
+const roadside = [];
+for (const x of [-2.68, 2.68]) {
+  const line = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.02, 120), new THREE.MeshBasicMaterial({ color: 0xf5d879 }));
+  line.position.set(x, 0.02, 0);
+  scene.add(line);
+}
+const dashes = [];
+for (let z = -54; z < 60; z += 5) {
+  const dash = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.025, 2.2), new THREE.MeshBasicMaterial({ color: 0xffe6a6 }));
+  dash.position.set(0, 0.025, z);
+  scene.add(dash);
+  dashes.push(dash);
+}
+
+const treeMaterials = [0x708657, 0x91a169, 0x5b784f].map(color => new THREE.MeshStandardMaterial({ color, roughness: 1 }));
+for (const side of [-1, 1]) {
+  for (let i = 0; i < 18; i++) {
+    const z = -55 + i * 6.5;
+    const x = side * (4.1 + (i % 3) * 1.4);
+    const height = 0.45 + (i % 4) * 0.12;
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.12, height, 7), new THREE.MeshStandardMaterial({ color: 0x594738 }));
+    trunk.position.set(x, height / 2, z);
+    trunk.castShadow = true;
+    scene.add(trunk);
+    const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(0.48 + (i % 3) * 0.12, 1), treeMaterials[i % treeMaterials.length]);
+    crown.position.set(x, height + 0.28, z);
+    crown.castShadow = true;
+    scene.add(crown);
+    roadside.push(trunk, crown);
+  }
+}
+
+const car = new THREE.Group();
+scene.add(car);
+const paint = new THREE.MeshStandardMaterial({ color: 0x37d9a1, metalness: 0.22, roughness: 0.28 });
+const dark = new THREE.MeshStandardMaterial({ color: 0x17252c, roughness: 0.36 });
+const glass = new THREE.MeshStandardMaterial({ color: 0xa5e5ed, metalness: 0.12, roughness: 0.22 });
+const chrome = new THREE.MeshStandardMaterial({ color: 0xd8e7dc, metalness: 0.7, roughness: 0.25 });
+const lamp = new THREE.MeshStandardMaterial({ color: 0xfff1a6, emissive: 0xffc54d, emissiveIntensity: 1.3 });
+const tailLamp = new THREE.MeshStandardMaterial({ color: 0xff483f, emissive: 0xb51513, emissiveIntensity: 0.8 });
+
+function box(parent, size, material, position) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
+  mesh.position.set(...position);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  parent.add(mesh);
+  return mesh;
+}
+
+box(car, [1.34, 0.42, 2.15], paint, [0, 0.43, 0]);
+box(car, [1.12, 0.12, 0.62], paint, [0, 0.69, -0.66]);
+box(car, [0.94, 0.42, 1.02], glass, [0, 0.83, 0.02]);
+box(car, [1.42, 0.14, 0.18], dark, [0, 0.36, -1.06]);
+box(car, [1.42, 0.14, 0.18], dark, [0, 0.36, 1.06]);
+box(car, [1.48, 0.08, 0.12], chrome, [0, 0.48, -1.09]);
+for (const x of [-0.5, 0.5]) {
+  box(car, [0.23, 0.12, 0.07], lamp, [x, 0.57, -1.1]);
+  box(car, [0.2, 0.12, 0.07], tailLamp, [x, 0.55, 1.1]);
+}
+for (const x of [-0.72, 0.72]) {
+  for (const z of [-0.7, 0.7]) {
+    const wheel = new THREE.Group();
+    wheel.position.set(x, 0.26, z);
+    const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.23, 0.16, 20), dark);
+    tire.rotation.z = Math.PI / 2;
+    tire.castShadow = true;
+    wheel.add(tire);
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.105, 0.17, 12), chrome);
+    rim.rotation.z = Math.PI / 2;
+    wheel.add(rim);
+    car.add(wheel);
+  }
+}
+box(car, [0.13, 0.16, 0.07], dark, [-0.42, 0.59, 0.72]);
+box(car, [0.13, 0.16, 0.07], dark, [0.42, 0.59, 0.72]);
+car.position.set(0, 0, 1.5);
+
+const coins = [];
+const coinGold = new THREE.MeshStandardMaterial({ color: 0xffd058, metalness: 0.65, roughness: 0.22, emissive: 0x704500, emissiveIntensity: 0.3 });
+for (let i = 0; i < 9; i++) {
+  const coin = new THREE.Group();
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.075, 10, 24), coinGold);
+  ring.rotation.y = Math.PI / 2;
+  coin.add(ring);
+  const center = new THREE.Mesh(new THREE.SphereGeometry(0.095, 12, 12), coinGold);
+  coin.add(center);
+  coin.position.set([-1.45, 0, 1.45][i % 3], 0.85, -7 - Math.floor(i / 3) * 12);
+  coin.castShadow = true;
+  scene.add(coin);
+  coins.push(coin);
+}
+
+const cones = [];
+for (let i = 0; i < 7; i++) {
+  const cone = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.28, 0.08, 10), dark);
+  base.position.y = 0.04;
+  cone.add(base);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.19, 0.5, 10), new THREE.MeshStandardMaterial({ color: 0xff813c, roughness: 0.55 }));
+  body.position.y = 0.32;
+  body.castShadow = true;
+  cone.add(body);
+  cone.position.set(i % 2 ? 1.8 : -1.8, 0, -15 - i * 13);
+  scene.add(cone);
+  cones.push(cone);
+}
+
+let steering = 0;
+let throttle = 0;
+let score = 0;
+let arMode = false;
+let hitTestSource = null;
+let currentHitPose = null;
+const clock = new THREE.Clock();
+
+function resize() {
+  const rect = host.getBoundingClientRect();
+  renderer.setSize(rect.width, rect.height, false);
+  camera.aspect = rect.width / Math.max(rect.height, 1);
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(host);
+resize();
+
+const reticle = new THREE.Mesh(new THREE.RingGeometry(0.12, 0.17, 32), new THREE.MeshBasicMaterial({ color: 0x96f0c0, side: THREE.DoubleSide }));
+reticle.matrixAutoUpdate = false;
+reticle.visible = false;
+scene.add(reticle);
+
+renderer.xr.addEventListener('sessionstart', async () => {
+  arMode = true;
+  scene.background = null;
+  document.body.classList.add('xr-active');
+  hitTestSource = null;
+  currentHitPose = null;
+  car.position.set(0, 0, -1.7);
+  car.rotation.set(0, 0, 0);
+  car.visible = true;
+  coins.forEach(coin => { coin.visible = false; });
+  cones.forEach(cone => { cone.visible = false; });
+  ground.visible = false;
+  road.visible = false;
+  dashes.forEach(dash => { dash.visible = false; });
+  roadside.forEach(object => { object.visible = false; });
+  status.textContent = 'Car is ready ahead. Move your phone to find a surface, or drive now.';
+  try {
+    const session = renderer.xr.getSession();
+    const viewer = await session.requestReferenceSpace('viewer');
+    hitTestSource = await session.requestHitTestSource({ space: viewer });
+  } catch {
+    status.textContent = 'Car is ready ahead. Surface scan is unavailable; you can still drive.';
+  }
+});
+
+renderer.xr.addEventListener('sessionend', () => {
+  arMode = false;
+  scene.background = new THREE.Color('#78939a');
+  document.body.classList.remove('xr-active');
+  hitTestSource = null;
+  currentHitPose = null;
+  reticle.visible = false;
+  coins.forEach(coin => { coin.visible = true; });
+  cones.forEach(cone => { cone.visible = true; });
+  ground.visible = true;
+  road.visible = true;
+  dashes.forEach(dash => { dash.visible = true; });
+  roadside.forEach(object => { object.visible = true; });
+  car.position.set(0, 0, 1.5);
+  car.visible = true;
+  status.textContent = 'Hold the up arrow to drive. Collect the gold rings!';
+});
+
+const arButton = ARButton.createButton(renderer, { requiredFeatures: ['hit-test'], optionalFeatures: ['dom-overlay'], domOverlay: { root: document.body } });
+arButton.classList.add('xr-exit');
+document.body.appendChild(arButton);
+document.querySelector('#ar').addEventListener('click', () => {
+  if (!navigator.xr || !isSecureContext || arButton.disabled) {
+    status.textContent = 'AR needs HTTPS, a current Chrome browser, and an ARCore supported Android phone.';
+    status.classList.add('error');
+    return;
+  }
+  arButton.click();
+});
+document.querySelector('#exit-ar').addEventListener('click', () => renderer.xr.getSession()?.end());
+
+renderer.domElement.addEventListener('click', () => {
+  if (!arMode) return;
+  if (currentHitPose) {
+    const { position, orientation } = currentHitPose.transform;
+    car.position.set(position.x, position.y, position.z);
+    car.quaternion.set(orientation.x, orientation.y, orientation.z, orientation.w);
+    status.textContent = 'Car placed! Hold ▲ to drive and use ◀ ▶ to steer.';
+  } else {
+    car.position.set(0, 0, -1.7);
+    status.textContent = 'Car is ready ahead. Hold ▲ to drive and use ◀ ▶ to steer.';
+  }
+  car.visible = true;
+});
+
+function resetCoin(coin) {
+  coin.position.x = [-1.45, 0, 1.45][Math.floor(Math.random() * 3)];
+  coin.position.z = -58 - Math.random() * 18;
+}
+
+renderer.setAnimationLoop((_, frame) => {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const activeAR = renderer.xr.isPresenting;
+  if (!activeAR) {
+    car.rotation.y += steering * dt * 0.65;
+    car.position.x = THREE.MathUtils.clamp(car.position.x + steering * dt * throttle * 1.9, -1.75, 1.75);
+    dashes.forEach(dash => {
+      dash.position.z += throttle * dt * 15;
+      if (dash.position.z > 8) dash.position.z -= 110;
+    });
+    coins.forEach(coin => {
+      coin.rotation.y += dt * 1.8;
+      coin.position.y = 0.85 + Math.sin(clock.elapsedTime * 2 + coin.position.z) * 0.08;
+      coin.position.z += throttle * dt * 15;
+      if (coin.position.z > car.position.z - 0.8) {
+        if (Math.abs(coin.position.x - car.position.x) < 0.9) {
+          score++;
+          scoreLabel.textContent = String(score);
+        }
+        resetCoin(coin);
+      }
+    });
+    cones.forEach(cone => {
+      cone.position.z += throttle * dt * 15;
+      if (cone.position.z > 8) cone.position.z -= 110;
+    });
+    camera.position.x += (car.position.x * 0.38 - camera.position.x) * 0.035;
+    speedLabel.textContent = String(Math.round(throttle * 80));
+  } else {
+    if (car.visible && throttle) {
+      car.rotation.y += steering * dt * 0.9;
+      car.translateZ(-throttle * dt * 1.35);
+    }
+    speedLabel.textContent = String(Math.round(throttle * 24));
+    if (frame && hitTestSource) {
+      const results = frame.getHitTestResults(hitTestSource);
+      if (results.length) {
+        currentHitPose = results[0].getPose(renderer.xr.getReferenceSpace());
+        reticle.visible = true;
+        reticle.matrix.fromArray(currentHitPose.transform.matrix);
+      } else {
+        currentHitPose = null;
+        reticle.visible = false;
+      }
+    }
+  }
+  renderer.render(scene, camera);
+});
+
+function bindHold(id, update) {
+  const button = document.querySelector(id);
+  button.addEventListener('pointerdown', event => { event.preventDefault(); button.setPointerCapture(event.pointerId); update(true); });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(type => button.addEventListener(type, () => update(false)));
+}
+bindHold('#left', down => { steering = down ? -1 : 0; });
+bindHold('#right', down => { steering = down ? 1 : 0; });
+bindHold('#gas', down => { throttle = down ? 1 : 0; });
+
+let dragX = null;
+renderer.domElement.addEventListener('pointerdown', event => { dragX = event.clientX; });
+renderer.domElement.addEventListener('pointermove', event => {
+  if (dragX !== null && !arMode) {
+    steering = THREE.MathUtils.clamp((event.clientX - dragX) / 50, -1, 1);
+    dragX = event.clientX;
+  }
+});
+renderer.domElement.addEventListener('pointerup', () => { dragX = null; steering = 0; });
+
+document.querySelector('#model').addEventListener('change', event => {
+  const file = event.target.files[0];
+  if (!file) return;
+  new GLTFLoader().load(URL.createObjectURL(file), gltf => {
+    car.clear();
+    gltf.scene.scale.setScalar(1);
+    gltf.scene.position.y = 0;
+    car.add(gltf.scene);
+    status.textContent = 'Custom model loaded. Drive or place it in AR.';
+  }, undefined, () => {
+    status.textContent = 'Could not load that model. Choose a valid GLB or glTF file.';
+    status.classList.add('error');
+  });
+});
+
+window.addEventListener('keydown', event => {
+  if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') steering = -1;
+  if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') steering = 1;
+  if (event.key === 'ArrowUp' || event.key === ' ') throttle = 1;
+});
+window.addEventListener('keyup', event => {
+  if (['ArrowLeft', 'ArrowRight', 'a', 'd'].includes(event.key)) steering = 0;
+  if (event.key === 'ArrowUp' || event.key === ' ') throttle = 0;
+});
