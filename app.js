@@ -6,6 +6,19 @@ const host = document.querySelector('#scene');
 const status = document.querySelector('#status');
 const speedLabel = document.querySelector('#speed');
 const scoreLabel = document.querySelector('#score');
+let arMode = false;
+let statusTimer;
+function announce(message, error = false) {
+  status.textContent = message;
+  status.classList.toggle('error', error);
+  if (arMode) {
+    status.classList.add('toast-visible');
+    clearTimeout(statusTimer);
+    statusTimer = setTimeout(() => status.classList.remove('toast-visible'), 2800);
+  } else {
+    status.classList.remove('toast-visible');
+  }
+}
 const siteUrl = document.querySelector('#site-url');
 siteUrl.textContent = location.href;
 try {
@@ -156,10 +169,35 @@ for (let i = 0; i < 7; i++) {
   cones.push(cone);
 }
 
+function createTrafficCar(color) {
+  const trafficCar = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.18, 0.4, 1.9), new THREE.MeshStandardMaterial({ color, metalness: 0.2, roughness: 0.34 }));
+  body.position.y = 0.4;
+  body.castShadow = true;
+  trafficCar.add(body);
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.42, 0.9), new THREE.MeshStandardMaterial({ color: 0xa8d8e2, metalness: 0.12, roughness: 0.25 }));
+  cabin.position.set(0, 0.78, 0.02);
+  trafficCar.add(cabin);
+  for (const x of [-0.63, 0.63]) for (const z of [-0.58, 0.58]) {
+    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.14, 14), dark);
+    wheel.rotation.z = Math.PI / 2;
+    wheel.position.set(x, 0.22, z);
+    trafficCar.add(wheel);
+  }
+  return trafficCar;
+}
+
+const trafficCars = [0xff765d, 0x5786ee, 0xffcc4e].map((color, i) => {
+  const trafficCar = createTrafficCar(color);
+  trafficCar.position.set([-1.4, 1.4, 0][i], 0, -20 - i * 17);
+  scene.add(trafficCar);
+  return trafficCar;
+});
+
 let steering = 0;
 let throttle = 0;
 let score = 0;
-let arMode = false;
+let carAnchored = false;
 let hitTestSource = null;
 let currentHitPose = null;
 const clock = new THREE.Clock();
@@ -180,31 +218,32 @@ scene.add(reticle);
 
 renderer.xr.addEventListener('sessionstart', async () => {
   arMode = true;
+  carAnchored = false;
   scene.background = null;
   document.body.classList.add('xr-active');
   hitTestSource = null;
   currentHitPose = null;
-  car.position.set(0, 0, -1.7);
-  car.rotation.set(0, 0, 0);
   car.visible = true;
   coins.forEach(coin => { coin.visible = false; });
   cones.forEach(cone => { cone.visible = false; });
+  trafficCars.forEach(trafficCar => { trafficCar.visible = false; });
   ground.visible = false;
   road.visible = false;
   dashes.forEach(dash => { dash.visible = false; });
   roadside.forEach(object => { object.visible = false; });
-  status.textContent = 'Car is ready ahead. Move your phone to find a surface, or drive now.';
+  announce('Car preview is ahead. Scan a surface and tap to place it, or drive now.');
   try {
     const session = renderer.xr.getSession();
     const viewer = await session.requestReferenceSpace('viewer');
     hitTestSource = await session.requestHitTestSource({ space: viewer });
   } catch {
-    status.textContent = 'Car is ready ahead. Surface scan is unavailable; you can still drive.';
+    announce('Car preview is ahead. Surface scan is unavailable; you can still drive.');
   }
 });
 
 renderer.xr.addEventListener('sessionend', () => {
   arMode = false;
+  carAnchored = false;
   scene.background = new THREE.Color('#78939a');
   document.body.classList.remove('xr-active');
   hitTestSource = null;
@@ -212,13 +251,14 @@ renderer.xr.addEventListener('sessionend', () => {
   reticle.visible = false;
   coins.forEach(coin => { coin.visible = true; });
   cones.forEach(cone => { cone.visible = true; });
+  trafficCars.forEach(trafficCar => { trafficCar.visible = true; });
   ground.visible = true;
   road.visible = true;
   dashes.forEach(dash => { dash.visible = true; });
   roadside.forEach(object => { object.visible = true; });
   car.position.set(0, 0, 1.5);
   car.visible = true;
-  status.textContent = 'Hold the up arrow to drive. Collect the gold rings!';
+  announce('Hold the up arrow to drive. Collect the gold rings!');
 });
 
 const arButton = ARButton.createButton(renderer, { requiredFeatures: ['hit-test'], optionalFeatures: ['dom-overlay'], domOverlay: { root: document.body } });
@@ -226,8 +266,7 @@ arButton.classList.add('xr-exit');
 document.body.appendChild(arButton);
 document.querySelector('#ar').addEventListener('click', () => {
   if (!navigator.xr || !isSecureContext || arButton.disabled) {
-    status.textContent = 'AR needs HTTPS, a current Chrome browser, and an ARCore supported Android phone.';
-    status.classList.add('error');
+    announce('AR needs HTTPS, current Chrome, and an ARCore supported Android phone.', true);
     return;
   }
   arButton.click();
@@ -240,13 +279,34 @@ renderer.domElement.addEventListener('click', () => {
     const { position, orientation } = currentHitPose.transform;
     car.position.set(position.x, position.y, position.z);
     car.quaternion.set(orientation.x, orientation.y, orientation.z, orientation.w);
-    status.textContent = 'Car placed! Hold ▲ to drive and use ◀ ▶ to steer.';
+    carAnchored = true;
+    positionARTraffic();
+    announce('Car placed. Hold ▲ to drive and use ◀ ▶ to steer.');
+  } else if (!carAnchored) {
+    carAnchored = true;
+    positionARTraffic();
+    announce('Car preview locked in place. Hold ▲ to drive and use ◀ ▶ to steer.');
   } else {
-    car.position.set(0, 0, -1.7);
-    status.textContent = 'Car is ready ahead. Hold ▲ to drive and use ◀ ▶ to steer.';
+    announce('Car placed. Hold ▲ to drive and use ◀ ▶ to steer.');
   }
   car.visible = true;
 });
+
+function positionARTraffic() {
+  const places = [[1.8, -2.4], [-1.9, -4.3], [1.7, -6.3]];
+  trafficCars.forEach((trafficCar, i) => {
+    const [x, z] = places[i];
+    const offset = new THREE.Vector3(x, 0, z).applyQuaternion(car.quaternion);
+    trafficCar.position.copy(car.position).add(offset);
+    trafficCar.rotation.y = car.rotation.y;
+    trafficCar.visible = true;
+  });
+  coins.forEach((coin, i) => {
+    const offset = new THREE.Vector3(i % 2 ? 1.1 : -1.1, 0.9, -3.2 - i * 1.8).applyQuaternion(car.quaternion);
+    coin.position.copy(car.position).add(offset);
+    coin.visible = i < 5;
+  });
+}
 
 function resetCoin(coin) {
   coin.position.x = [-1.45, 0, 1.45][Math.floor(Math.random() * 3)];
@@ -279,14 +339,40 @@ renderer.setAnimationLoop((_, frame) => {
       cone.position.z += throttle * dt * 15;
       if (cone.position.z > 8) cone.position.z -= 110;
     });
+      trafficCars.forEach(trafficCar => {
+        trafficCar.position.z += throttle * dt * 9;
+        if (trafficCar.position.z > 8) trafficCar.position.z -= 78;
+      });
     camera.position.x += (car.position.x * 0.38 - camera.position.x) * 0.035;
     speedLabel.textContent = String(Math.round(throttle * 80));
   } else {
+      if (frame && !carAnchored) {
+        const referenceSpace = renderer.xr.getReferenceSpace();
+        const viewerPose = referenceSpace ? frame.getViewerPose(referenceSpace) : null;
+        if (viewerPose) {
+          const { position, orientation } = viewerPose.transform;
+          const viewerRotation = new THREE.Quaternion(orientation.x, orientation.y, orientation.z, orientation.w);
+          const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(viewerRotation);
+          forward.y = 0;
+          forward.normalize();
+          car.position.set(position.x + forward.x * 1.6, Math.max(0, position.y - 1.45), position.z + forward.z * 1.6);
+          car.rotation.y = Math.atan2(-forward.x, -forward.z);
+        }
+      }
     if (car.visible && throttle) {
       car.rotation.y += steering * dt * 0.9;
       car.translateZ(-throttle * dt * 1.35);
     }
     speedLabel.textContent = String(Math.round(throttle * 24));
+      if (carAnchored) coins.forEach(coin => {
+        if (!coin.visible) return;
+        coin.rotation.y += dt * 1.7;
+        if (throttle && coin.position.distanceTo(car.position) < 1.05) {
+          score++;
+          scoreLabel.textContent = String(score);
+          coin.visible = false;
+        }
+      });
     if (frame && hitTestSource) {
       const results = frame.getHitTestResults(hitTestSource);
       if (results.length) {
